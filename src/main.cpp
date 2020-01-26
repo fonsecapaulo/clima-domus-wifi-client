@@ -10,9 +10,9 @@ DHT dht(DHTPIN, DHTTYPE);
 void setup() {
     
     pinMode(LED_PIN, OUTPUT);
-    
+#ifdef DEBUG    
     Serial.begin(115200);                                 //Serial connection
-    
+#endif    
     // Set your Static IP address
     IPAddress local_IP(192, 168, 2, IP_ENDING);
     // Set your Gateway IP address
@@ -24,17 +24,29 @@ void setup() {
 
     // Configures static IP address
     if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+#ifdef DEBUG 
         Serial.println("Wifi Failed to configure");
+#endif
     }    
     
     WiFi.begin(SECRET_SSID, SECRET_PASSWORD);             //WiFi connection
 
     while (WiFi.status() != WL_CONNECTED) {               //Wait for the WiFI connection completion
-
         delay(500);
+#ifdef DEBUG 
         Serial.println("Waiting for connection");
-
+#endif
     }
+    
+#ifdef DEBUG
+    //Prints MAC address
+    Serial.print("MAC address:\t");
+    Serial.println(WiFi.macAddress());
+    //Prints IP address
+    Serial.print("IP address:\t");
+    Serial.println(WiFi.localIP());         // Send the IP address of the ESP8266 to the computer
+#endif
+
     //Initialize the DHT
     dht.begin();
 }
@@ -51,10 +63,12 @@ void loop() {
     float t = dht.readTemperature();
 
     if (isnan(h) || isnan(t)) { // || isnan(f)) {
+#ifdef DEBUG 
         Serial.println("Failed to read from DHT sensor!");
+#endif
     } else {
         char print_buffer[60];
-        sprintf(print_buffer, "Humidity: %.2fRH/tTemperature: %.2f*C", h, t);
+        sprintf(print_buffer, "Humidity: %.2fRH\tTemperature: %.2f*C", h, t);
         Serial.println(print_buffer);
 
         if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
@@ -77,7 +91,9 @@ void loop() {
             http.end();  //Close connection
 
         } else {
+#ifdef DEBUG 
             Serial.println("Error in WiFi connection");
+#endif
         }
     }
     delay(1000*60*MIN_DELAY);  //Send a request every 30 seconds

@@ -15,3 +15,4 @@
 #define IP_ENDING               172
 
 #define MIN_DELAY               20
+#define SLEEP_MINUTES           1

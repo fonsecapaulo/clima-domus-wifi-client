@@ -1,6 +1,7 @@
 #define DEBUG                   1
+#define DHCP                    1
 
-#define SENSOR_ID               2                   //1 = Office location
+#define SENSOR_ID               4                   //1 = Office location
 
 #define DHTPIN                  4                   // what digital pin the DHT22 is conected to
 #define DHTTYPE                 DHT22
@@ -14,5 +15,5 @@
 
 #define IP_ENDING               172
 
-#define MIN_DELAY               20
+#define MIN_DELAY               0
 #define SLEEP_MINUTES           1

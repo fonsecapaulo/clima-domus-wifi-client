@@ -27,22 +27,25 @@ void setupUART(){
 *SETUP WIFI + HTTP  
 ******************************************************/
 void setupWifiHTTP(){
-    // Set up Static IP address
-    IPAddress local_IP(192, 168, 2, IP_ENDING);
-    // Set up Gateway IP address
-    IPAddress gateway(192, 168, 2, 254);
-    // Set up subnet
-    IPAddress subnet(255, 255, 0, 0);
-    // Set up DNS
-    IPAddress primaryDNS(8, 8, 8, 8);   //optional
-    IPAddress secondaryDNS(8, 8, 4, 4); //optional
-    // Configures static IP address
-    if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
-        #ifdef DEBUG 
-            Serial.println("Wifi Failed to configure");
-        #endif
-    }    
+    #ifndef DHCP
+        // Set up Static IP address
+        IPAddress local_IP(192, 168, 2, IP_ENDING);
+        // Set up Gateway IP address
+        IPAddress gateway(192, 168, 2, 254);
+        // Set up subnet
+        IPAddress subnet(255, 255, 0, 0);
+        // Set up DNS
+        IPAddress primaryDNS(8, 8, 8, 8);   //optional
+        IPAddress secondaryDNS(8, 8, 4, 4); //optional
+        // Configures static IP address
     
+        if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+            #ifdef DEBUG 
+                Serial.println("Wifi Failed to configure");
+            #endif
+        }
+    #endif
+        
     WiFi.begin(SECRET_SSID, SECRET_PASSWORD);             //WiFi connection
     while (WiFi.status() != WL_CONNECTED) {               //Wait for the WiFI connection completion
         delay(500);
@@ -86,8 +89,10 @@ void publishClimaReading(){
     } else {
         char print_buffer[60];
         sprintf(print_buffer, "Humidity: %.2fRH\tTemperature: %.2f*C", h, t);
-        Serial.println(print_buffer);
-
+        
+        #ifdef DEBUG 
+            Serial.println(print_buffer);
+        #endif    
         if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
 
             char request[70];
@@ -100,8 +105,9 @@ void publishClimaReading(){
             http.addHeader("Content-Type", "application/json");  //Specify content-type header
 
             int httpCode = http.POST(request);
-            String payload = http.getString();      //Get the response payload
-
+            #ifdef DEBUG 
+                String payload = http.getString();      //Get the response payload
+            #endif
             http.end();  //Close connection
 
             #ifdef DEBUG 

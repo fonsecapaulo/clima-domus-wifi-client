@@ -2,10 +2,14 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <DHT.h>
+#include <EMailSender.h>
 #include "secrets.h"
 #include "config.h"
 
 DHT dht(DHTPIN, DHTTYPE);
+
+//Set ADC to measure Voltage
+ADC_MODE(ADC_VCC);
 
 /******************************************************
 *SETUP GPIO
@@ -61,6 +65,9 @@ void setupWifiHTTP(){
         //Prints IP address
         Serial.print("IP address:\t");
         Serial.println(WiFi.localIP());         // Send the IP address of the ESP8266 to the computer
+        //Prints IP address
+        Serial.print("Channel:\t");
+        Serial.println(WiFi.channel());         // Send the IP address of the ESP8266 to the computer
     #endif
 }
 
@@ -71,6 +78,28 @@ void setupDHT(){
     dht.begin();
 }
 
+/************************************************************
+*Send out Email with batery warning
+*************************************************************/
+void sendOutWarningEmail(uint16_t vccValue){
+    EMailSender emailSend(SECRET_EMAIL, SECRET_GOOGLE_PASS);
+   
+    EMailSender::EMailMessage message;
+    message.subject = "[CLIMA-DOMUS] Low battery Warning!";
+    message.message = "[CLIMA-DOMUS] Reports a sensor with low battery!<br/>Sensor: " + String(SENSOR_ID);
+    message.message += "<br/>Room: " + String(CLIMA_DOMUS_ROOMS[SENSOR_ID-1]);
+    message.message += "<br/>VCC: "+ String(vccValue);
+    message.message += "<br/><br/><strong>CLIMA-DOMUS</strong>";
+
+    EMailSender::Response resp = emailSend.send("paulojfonseca@gmail.com", message);
+
+    #ifdef DEBUG
+        Serial.println("Sending status: ");
+        //Serial.println(resp.code);
+        Serial.println(resp.desc);
+        //Serial.println(resp.status);
+    #endif
+}
 
 /************************************************************
 *Publish in the Server the Humidity and Temperature reading
@@ -134,10 +163,25 @@ void setup() {
 
     setupDHT();
 
+    //Reads the VCC voltage
+    uint16_t vcc=0;
+    vcc = ESP.getVcc();
+
+    #ifdef DEBUG
+        Serial.print("VCC Voltage :");
+        Serial.println(vcc);
+    #endif    
+
+    //TODO send out email if vcc is too low.
+    if (vcc<BATTERY_THRESHOLD)
+        sendOutWarningEmail(vcc);
+
     publishClimaReading();
 
     #ifdef DEBUG
-        Serial.println("Going to deepsleep for 1 minute");
+        Serial.print("Going to deepsleep for ");
+        Serial.print(SLEEP_MINUTES);
+        Serial.println(" minute(s)");
         //Signalize going to deep sleep
         digitalWrite(LED_PIN, HIGH);
     #endif    

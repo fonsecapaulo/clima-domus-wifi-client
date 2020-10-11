@@ -1,5 +1,5 @@
 #define DEBUG                   1
-#define DHCP                    0
+//#define DHCP                    0
 
 #define SENSOR_ID               4                   //1 = Office location
 
@@ -20,4 +20,4 @@
 
 #define BATTERY_THRESHOLD       2900//3050
 
-const char* CLIMA_DOMUS_ROOMS[] ={"Office", "3rd Floor Room", "Guest Room", "Bed Room"};
+const char* CLIMA_DOMUS_ROOMS[] ={"Office", "2nd Floor Room", "Guest Room", "Bed Room"};

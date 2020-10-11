@@ -32,6 +32,7 @@ void setupUART(){
 ******************************************************/
 void setupWifiHTTP(){
     #ifndef DHCP
+        Serial.println("Static IP Config!");
         // Set up Static IP address
         IPAddress local_IP(192, 168, 2, IP_ENDING);
         // Set up Gateway IP address

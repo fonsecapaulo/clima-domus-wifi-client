@@ -10,7 +10,7 @@
 
 #define SERVER_IP               "192.168.2.170"
 #define API_ENDPOINT            "/api/insert"
-#define SERVER_PROTOCOL         "http://"
+#define SERVER_PROTOCOL         "https://"
 #define API_REQUEST             SERVER_PROTOCOL SERVER_IP API_ENDPOINT
 
 #define IP_ENDING               174

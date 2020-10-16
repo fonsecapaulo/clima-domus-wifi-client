@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecureBearSSL.h>
 #include <DHT.h>
 #include <EMailSender.h>
 #include "secrets.h"
@@ -128,20 +129,23 @@ void publishClimaReading(){
             char request[70];
             sprintf(request, "{\"sensor_id\":\"%d\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\"}", SENSOR_ID, t, h);
 
-            WiFiClient wifi_client;
-            HTTPClient http;            //Declare object of class HTTPClient
+            //WiFiClient wifi_client;
+            std::unique_ptr<BearSSL::WiFiClientSecure> wifi_client (new BearSSL::WiFiClientSecure);
+            wifi_client->setInsecure();
+            
+            HTTPClient https;            //Declare object of class HTTPClient
 
-            http.begin(wifi_client, API_REQUEST);                //Specify request destination
-            http.addHeader("Content-Type", "application/json");  //Specify content-type header
+            https.begin(*wifi_client, API_REQUEST);                //Specify request destination
+            https.addHeader("Content-Type", "application/json");  //Specify content-type header
 
-            int httpCode = http.POST(request);
+            int httpsCode = https.POST(request);
             #ifdef DEBUG 
-                String payload = http.getString();      //Get the response payload
+                String payload = https.getString();      //Get the response payload
             #endif
-            http.end();  //Close connection
+            https.end();  //Close connection
 
             #ifdef DEBUG 
-                Serial.println(httpCode);   //Print HTTP return code
+                Serial.println(httpsCode);   //Print HTTP return code
                 Serial.println(payload);    //Print request response payload
             #endif
         } else {

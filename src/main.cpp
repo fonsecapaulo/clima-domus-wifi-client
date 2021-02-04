@@ -16,7 +16,7 @@ ADC_MODE(ADC_VCC);
 *SETUP GPIO
 * *****************************************************/
 void setupGPIO(){
-    digitalWrite(LED_PIN, LOW); // Turn the LED on by making the voltage LOW
+    pinMode(LED_PIN, OUTPUT);
 }
 
 /******************************************************
@@ -160,7 +160,7 @@ void setup() {
     setupGPIO();
     #ifdef DEBUG    
         //Signalize start of setup
-        pinMode(LED_PIN, OUTPUT);
+        digitalWrite(LED_PIN, LOW); // Turn the LED on by making the voltage LOW
     #endif
     setupUART();
 
@@ -177,7 +177,7 @@ void setup() {
         Serial.println(vcc);
     #endif    
 
-    //TODO send out email if vcc is too low.
+    //send out email if vcc is too low.
     if (vcc<BATTERY_THRESHOLD)
         sendOutWarningEmail(vcc);
 

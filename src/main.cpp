@@ -1,13 +1,16 @@
 #include <Arduino.h>
-#include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
-#include <WiFiClientSecureBearSSL.h>
 #include <DHT.h>
 #include <EMailSender.h>
+#include <PubSubClient.h>
+
 #include "secrets.h"
 #include "config.h"
 
 DHT dht(DHTPIN, DHTTYPE);
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 //Set ADC to measure Voltage
 ADC_MODE(ADC_VCC);
@@ -16,7 +19,7 @@ ADC_MODE(ADC_VCC);
 *SETUP GPIO
 * *****************************************************/
 void setupGPIO(){
-    pinMode(LED_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);    
 }
 
 /******************************************************
@@ -80,6 +83,13 @@ void setupDHT(){
     dht.begin();
 }
 
+/******************************************************
+*SETUP MQTT Client
+*******************************************************/
+void setupMqttClient(){
+    client.setServer(MQTT_SERVER, MQTT_SERVER_PORT);
+}
+
 /************************************************************
 *Send out Email with batery warning
 *************************************************************/
@@ -103,6 +113,40 @@ void sendOutWarningEmail(uint16_t vccValue){
     #endif
 }
 
+void mqttConnectAndPublish(char * msg) {
+    // Loop until we're connected
+    while (!client.connected()) {
+        #ifdef DEBUG
+            Serial.print("Attempting MQTT connection...");
+        #endif
+        char clientId[50];
+        sprintf(clientId, "Clima Domus Client - %s",
+            CLIMA_DOMUS_ROOMS[SENSOR_ID-1]
+        );
+    
+        // Attempt to connect
+        if (client.connect(clientId)) {
+            #ifdef DEBUG
+                Serial.println("MQTT Client Connected");
+            #endif
+            client.publish(MQTT_TOPIC, msg);            
+            break;      
+        } else {
+            #ifdef DEBUG
+                Serial.print("MQTT Client failed connection, rc=");
+                Serial.print(client.state());
+                Serial.println(" try again in 5 seconds");
+            #endif
+            // Wait 5 seconds before retrying
+            delay(5000);
+        }
+    }
+    client.disconnect();
+    #ifdef DEBUG
+    Serial.println("MQTT Client Disconnected");
+    #endif
+}
+
 /************************************************************
 *Publish in the Server the Humidity and Temperature reading
 *************************************************************/
@@ -112,42 +156,29 @@ void publishClimaReading(){
     float h = dht.readHumidity();
     // Read temperature as Celsius (the default)
     float t = dht.readTemperature();
-
+    
     if (isnan(h) || isnan(t)) { // || isnan(f)) {
         #ifdef DEBUG 
             Serial.println("Failed to read from DHT sensor!");
         #endif
     } else {
-        char print_buffer[60];
-        sprintf(print_buffer, "Humidity: %.2fRH\tTemperature: %.2f*C", h, t);
-        
-        #ifdef DEBUG 
+        #ifdef DEBUG     
+            char print_buffer[60];
+            sprintf(print_buffer, "Humidity: %.2fRH\tTemperature: %.2f*C", h, t);
             Serial.println(print_buffer);
         #endif    
         if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
 
-            char request[70];
-            sprintf(request, "{\"sensor_id\":\"%d\",\"temperature\":\"%.2f\",\"humidity\":\"%.2f\"}", SENSOR_ID, t, h);
+            char msg[200];
+            sprintf(msg, "reading,database=%s,sensor_id=%s temperature=%.2f,humidity=%.2f",
+                MQTT_INFLUXDB_DATABASE,
+                CLIMA_DOMUS_ROOMS[SENSOR_ID-1],
+                t,
+                h
+            );
 
-            //WiFiClient wifi_client;
-            std::unique_ptr<BearSSL::WiFiClientSecure> wifi_client (new BearSSL::WiFiClientSecure);
-            wifi_client->setInsecure();
+            mqttConnectAndPublish(msg);
             
-            HTTPClient https;            //Declare object of class HTTPClient
-
-            https.begin(*wifi_client, API_REQUEST);                //Specify request destination
-            https.addHeader("Content-Type", "application/json");  //Specify content-type header
-
-            int httpsCode = https.POST(request);
-            #ifdef DEBUG 
-                String payload = https.getString();      //Get the response payload
-            #endif
-            https.end();  //Close connection
-
-            #ifdef DEBUG 
-                Serial.println(httpsCode);   //Print HTTP return code
-                Serial.println(payload);    //Print request response payload
-            #endif
         } else {
             #ifdef DEBUG 
                 Serial.println("Error in WiFi connection");
@@ -157,11 +188,14 @@ void publishClimaReading(){
 }
 
 void setup() {
+    
     setupGPIO();
+    
     #ifdef DEBUG    
         //Signalize start of setup
         digitalWrite(LED_PIN, LOW); // Turn the LED on by making the voltage LOW
     #endif
+    
     setupUART();
 
     setupWifiHTTP();
@@ -181,6 +215,8 @@ void setup() {
     if (vcc<BATTERY_THRESHOLD)
         sendOutWarningEmail(vcc);
 
+    setupMqttClient();
+    
     publishClimaReading();
 
     #ifdef DEBUG
